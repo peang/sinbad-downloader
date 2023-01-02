@@ -1,6 +1,5 @@
 import { CACHE_MANAGER, Inject, Logger } from '@nestjs/common';
 import { Cache } from 'cache-manager-ioredis';
-import * as decompress from 'decompress';
 import * as fs from 'fs';
 import * as http from 'http';
 import * as TelegramBot from 'node-telegram-bot-api';
@@ -78,7 +77,7 @@ export class TelegramService {
         const downloadPath = path.resolve(
           __dirname,
           '..',
-          `downloads/sinbad-${environment}-${chatId}.tar.gz`,
+          `downloads/sinbad-${environment}-${chatId}.apk`,
         );
 
         const filePath = fs.createWriteStream(downloadPath);
@@ -116,40 +115,37 @@ export class TelegramService {
         filePath.on('finish', () => {
           filePath.close();
           this.sendMessage(chatId, 'Download Complete √');
-          decompress(downloadPath, 'extracted').then((files) => {
-            files.forEach((file) => {
-              if (file.path.includes('arm64')) {
-                this.sendMessage(
-                  chatId,
-                  'Please Wait, Sending File to You ...',
-                );
-                this.bot
-                  .sendDocument(
-                    chatId,
-                    file.data,
-                    {},
-                    {
-                      filename: `sinbad-${environment}.apk`,
-                      contentType: 'application/octet-stream',
-                    },
-                  )
-                  .finally(() => {
-                    this.deleteMessages(chatId);
+          // decompress(downloadPath, 'extracted').then((files) => {
+          // files.forEach((file) => {
+          // if (file.path.includes('arm64')) {
+          this.sendMessage(chatId, 'Please Wait, Sending File to You ...');
+          this.bot
+            .sendDocument(
+              chatId,
+              fs.readFileSync(downloadPath),
+              {},
+              {
+                filename: `sinbad-${environment}.apk`,
+                contentType: 'application/octet-stream',
+              },
+            )
+            .finally(() => {
+              this.deleteMessages(chatId);
 
-                    try {
-                      fs.rmSync(downloadPath, { force: true });
-                      fs.rmSync('./extracted', {
-                        force: true,
-                        recursive: true,
-                      });
-                    } catch (err) {
-                      console.error(err);
-                      console.log('Failed Remove Folder');
-                    }
-                  });
+              try {
+                fs.rmSync(downloadPath, { force: true });
+                // fs.rmSync('./extracted', {
+                //   force: true,
+                //   recursive: true,
+                // });
+              } catch (err) {
+                console.error(err);
+                console.log('Failed Remove Folder');
               }
             });
-          });
+          // }
+          // });
+          // });
         });
       });
     } catch (err) {
